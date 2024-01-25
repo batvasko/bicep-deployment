@@ -1,0 +1,90 @@
+# This is a basic workflow to help you get started with Actions
+
+name: "Deploy To Azure"
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+env:
+  resourceGroupName: GitHubExampleRG
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  deploy:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4.1.1
+
+      - name: Azure Login
+        uses: Azure/login@v1.6.1
+        with:
+          # Paste output of `az ad sp create-for-rbac` as value of secret variable: AZURE_CREDENTIALS
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          # ClientId of the Azure Service principal created.
+          # client-id: # optional
+          # TenantId of the Azure Service principal created.
+          # tenant-id: # optional
+          # Azure subscriptionId
+          # subscription-id: # optional
+          # Set this value to true to enable Azure PowerShell Login in addition to Azure CLI login
+          enable-AzPSSession: true # optional - true or false
+          # Name of the environment. Supported values are azurecloud, azurestack, azureusgovernment, azurechinacloud, azuregermancloud. Default being azurecloud
+          # environment: # optional, default is azurecloud
+          # Set this value to true to enable support for accessing tenants without subscriptions
+          # allow-no-subscriptions: # optional
+          # Provide audience field for access-token. Default value is api://AzureADTokenExchange
+          # audience: # optional, default is api://AzureADTokenExchange
+          # The type of authentication. Supported values are SERVICE_PRINCIPAL, IDENTITY. Default value is SERVICE_PRINCIPAL
+          # auth-type: # optional, default is SERVICE_PRINCIPAL
+
+      - name: Azure PowerShell Action
+        uses: Azure/powershell@v1.4.0
+        with:
+          # Specify the Az PowerShell script here.
+          inlineScript: New-AzResourceGroup -Name ${{ env.resourceGroupName }} -location swedencentral -Force
+          # Azure PS version to be used to execute the script, example: 1.8.0, 2.8.0, 3.4.0. To use the latest version, specify "latest".
+          azPSVersion: latest
+          # Select the value of the ErrorActionPreference variable for executing the script. Options: stop, continue, silentlyContinue. Default is Stop.
+          # errorActionPreference: # optional, default is Stop
+          # If this is true, this task will fail if any errors are written to the error pipeline, or if any data is written to the Standard Error stream.
+          # failOnStandardError: # optional, default is false
+          # Used to pull Az module from Azure/az-ps-module-versions.  Since there's a default, this is typically not supplied by the user.
+          # githubToken: # optional, default is ${{ github.token }}
+
+      - name: Deploy Azure Resource Manager (ARM) Template
+        uses: Azure/arm-deploy@v1.0.9
+        with:
+          # Provide the scope of the deployment. Valid values are: 'resourcegroup', 'managementgroup', 'subscription'
+          scope: resourcegroup
+          # Override the Subscription Id set by Azure Login.
+          # subscriptionId: # optional
+          # Specify the Id for the Management Group, only required for Management Group Deployments.
+          # managementGroupId: # optional
+          # Provide the target region, only required for management Group or Subscription deployments.
+          # region: # optional
+          # Provide the name of a resource group, only required for resource Group deployments.
+          resourceGroupName: ${{ env.resourceGroupName }}
+          # Specify the path or URL to the Azure Resource Manager template.
+          template: main.bicep
+          # Incremental (only add resources to resource group) or Complete (remove extra resources from resource group) or Validate (only validates the template).
+          # deploymentMode: # optional
+          # Specifies the name of the resource group deployment to create.
+          # deploymentName: # optional
+          # Supply deployment parameter values.
+          # parameters: # optional
+          # Specify whether to fail the action if some data is written to stderr stream of az cli. Valid values are: true, false
+          # failOnStdErr: # optional, default is true
+          # Specify any additional arguments for the deployment.
+          # additionalArguments: # optional 
